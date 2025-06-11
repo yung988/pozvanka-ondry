@@ -1,15 +1,967 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="cs">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>React Three Basketball</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basketbalová narozeninová pozvánka</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #instructions {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 18px;
+            z-index: 100;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 300px;
+        }
+        
+        #aimLine {
+            position: absolute;
+            pointer-events: none;
+            z-index: 75;
+            stroke: white;
+            stroke-width: 3;
+            opacity: 0.8;
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));
+        }
+        
+        .balloon {
+            position: absolute;
+            width: 60px;
+            height: 80px;
+            border-radius: 50%;
+            opacity: 0.9;
+            animation: floatUp 4s ease-out forwards;
+            z-index: 150;
+        }
+        
+        @keyframes floatUp {
+            0% {
+                transform: translateY(0) scale(0.5);
+                opacity: 0.9;
+            }
+            50% {
+                transform: translateY(-50vh) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) scale(1.2);
+                opacity: 0;
+            }
+        }
+        
+        .fanfare {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 80px;
+            font-weight: bold;
+            color: gold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            z-index: 180;
+            animation: fanfareEffect 3s ease-in-out;
+            pointer-events: none;
+        }
+        
+        @keyframes fanfareEffect {
+            0% {
+                transform: translate(-50%, -50%) scale(0) rotate(-180deg);
+                opacity: 0;
+            }
+            25% {
+                transform: translate(-50%, -50%) scale(1.5) rotate(0deg);
+                opacity: 1;
+            }
+            75% {
+                transform: translate(-50%, -50%) scale(1) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(0.8) rotate(0deg);
+                opacity: 0;
+            }
+        }
+        
+        #invitation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            color: white;
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-family: 'Helvetica Neue', sans-serif;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .invitation-content {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        #invitation h1 {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 0 0 15px 0;
+            color: #FFD700;
+        }
+        
+        #invitation p {
+            margin: 10px 0;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+
+        .button-group {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        #invitation .button {
+            display: block;
+            background: #FF6B6B;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s, background-color 0.2s;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        #invitation .button:hover {
+            transform: translateY(-2px);
+            background: #ff4757;
+        }
+
+        #close-invitation {
+            margin-top: 20px;
+            font-size: 14px;
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+        }
+        
+        #powerMeter {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 200px;
+            height: 20px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+            z-index: 100;
+        }
+        
+        #powerBar {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #FFC107, #FF5722);
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.1s;
+        }
+        
+        #score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            z-index: 100;
+        }
+    </style>
 </head>
-
 <body>
-  <div id="root"></div>
-  <script type="module" src="/src/index.jsx"></script>
-</body>
+    <div id="gameContainer">
+        <div id="instructions">
+            <strong>🏀 Basketbalová výzva!</strong><br>
+            Táhni prstem od míče směrem k koši<br>
+            Délka tahu = síla střelby<br>
+            Pusť prst pro vystřelení<br>
+            <strong>📱 Pohybuj telefonem pro změnu pohledu!</strong><br>
+            <strong>Tref koš a uvidíš pozvánku!</strong>
+        </div>
+        
+        <svg id="aimLine" width="100%" height="100%" style="display: none;">
+            <line id="trajectoryLine" x1="0" y1="0" x2="0" y2="0" />
+            <circle id="aimDot" cx="0" cy="0" r="8" fill="white" opacity="0.9"/>
+        </svg>
+        
+        <div id="powerMeter">
+            <div id="powerBar"></div>
+        </div>
+        
+        <div id="score">
+            Pokusy: <span id="attempts">0</span><br>
+            Koše: <span id="baskets">0</span>
+        </div>
+        
+        <div id="invitation">
+            <div class="invitation-content">
+                <h1>🎉 JSI ZVANÝ! 🎉</h1>
+                <p><strong>Trefil jsi koš a odemkl pozvánku na moji narozeninovou oslavu!</strong></p>
+                <p>Přijď to se mnou oslavit zítra. Čeká nás spousta zábavy, her a dobrého jídla.</p>
+                <div class="button-group">
+                    <a href="https://maps.app.goo.gl/q57GzSXWAjEMSeH2A" target="_blank" class="button">📍 Zobrazit na mapě</a>
+                    <button id="download-ics" class="button">🗓️ Přidat do kalendáře</button>
+                </div>
+                <p id="close-invitation">Zavřít a pokračovat ve hře</p>
+            </div>
+        </div>
+    </div>
 
+    <script>
+        // Globální proměnné
+        let scene, camera, renderer, ball, hoop, court;
+        let touchStartX = 0, touchStartY = 0;
+        let touchCurrentX = 0, touchCurrentY = 0;
+        let isAiming = false;
+        let ballInMotion = false;
+        let attempts = 0;
+        let baskets = 0;
+        let invitationShown = false;
+        let ballScreenPos = { x: 0, y: 0 };
+        let prevBallY = 0; // Pomocná proměnná pro detekci průletu obručí
+        let ballWasAboveRim = false; // Sledování, zda míč byl nad obručí
+        
+        // Gyroscope ovládání
+        let gyroEnabled = false;
+        let baseOrientation = { alpha: 0, beta: 0, gamma: 0 };
+        let initialCameraPosition = { x: 0, y: 3, z: 8 };
+        let initialCameraRotation = { x: 0, y: 0, z: 0 };
+        let currentCameraOffset = { x: 0, y: 0, z: 0 };
+        
+        // Fyzika
+        let ballVelocity = new THREE.Vector3();
+        const gravity = -0.015; // Jemnější gravitace
+        const friction = 0.94;
+        const bounce = 0.65;
+        
+        // Inicializace
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x87CEEB, 10, 100);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 3, 8);
+            camera.lookAt(0, 2, 0);
+            
+            // Uložení původní pozice kamery
+            initialCameraPosition = { 
+                x: camera.position.x, 
+                y: camera.position.y, 
+                z: camera.position.z 
+            };
+            initialCameraRotation = {
+                x: camera.rotation.x,
+                y: camera.rotation.y, 
+                z: camera.rotation.z
+            };
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x87CEEB);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('gameContainer').appendChild(renderer.domElement);
+            
+            // Světla
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+            
+            // Hřiště
+            createCourt();
+            
+            // Koš
+            createHoop();
+            
+            // Míč
+            createBall();
+            
+            // Event listenery
+            setupEventListeners();
+
+            // Inicializace gyroskopu
+            initGyroscope();
+            
+            // Start animace
+            animate();
+        }
+        
+        function createCourt() {
+            // Podlaha
+            const courtGeometry = new THREE.PlaneGeometry(20, 15);
+            const courtMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x8B4513,
+                transparent: true,
+                opacity: 0.9
+            });
+            court = new THREE.Mesh(courtGeometry, courtMaterial);
+            court.rotation.x = -Math.PI / 2;
+            court.receiveShadow = true;
+            scene.add(court);
+            
+            // Čáry na hřišti
+            const lineGeometry = new THREE.BoxGeometry(0.1, 0.01, 10);
+            const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            
+            // Střední čára
+            const centerLine = new THREE.Mesh(lineGeometry, lineMaterial);
+            centerLine.position.set(0, 0.01, 0);
+            scene.add(centerLine);
+            
+            // Postranní čáry
+            const sideLine1 = new THREE.Mesh(new THREE.BoxGeometry(15, 0.01, 0.1), lineMaterial);
+            sideLine1.position.set(0, 0.01, 5);
+            scene.add(sideLine1);
+            
+            const sideLine2 = new THREE.Mesh(new THREE.BoxGeometry(15, 0.01, 0.1), lineMaterial);
+            sideLine2.position.set(0, 0.01, -5);
+            scene.add(sideLine2);
+        }
+        
+        function createHoop() {
+            const hoopGroup = new THREE.Group();
+            
+            // Koš (obruč)
+            const ringGeometry = new THREE.TorusGeometry(0.6, 0.05, 8, 16);
+            const ringMaterial = new THREE.MeshLambertMaterial({ color: 0xff6600 });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.position.set(0, 4, -6);
+            ring.rotation.x = Math.PI / 2;
+            hoopGroup.add(ring);
+            
+            // Síť
+            const netGeometry = new THREE.CylinderGeometry(0.6, 0.4, 0.8, 12, 1, true);
+            const netMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xffffff, 
+                wireframe: true,
+                transparent: true,
+                opacity: 0.7
+            });
+            const net = new THREE.Mesh(netGeometry, netMaterial);
+            net.position.set(0, 3.6, -6);
+            hoopGroup.add(net);
+            
+            // Deska
+            const backboardGeometry = new THREE.BoxGeometry(2, 1.5, 0.1);
+            const backboardMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff });
+            const backboard = new THREE.Mesh(backboardGeometry, backboardMaterial);
+            backboard.position.set(0, 4.5, -6.2);
+            backboard.name = 'backboard'; // Přidáme jméno pro snadnější identifikaci
+            hoopGroup.add(backboard);
+            
+            // Sloup
+            const poleGeometry = new THREE.CylinderGeometry(0.1, 0.1, 4.5);
+            const poleMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 });
+            const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+            pole.position.set(0, 2.25, -6.5);
+            hoopGroup.add(pole);
+            
+            hoop = hoopGroup;
+            scene.add(hoop);
+        }
+        
+        function createBall() {
+            const ballGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+            const ballMaterial = new THREE.MeshLambertMaterial({ color: 0xff8800 });
+            ball = new THREE.Mesh(ballGeometry, ballMaterial);
+            ball.position.set(0, 1, 5);
+            ball.castShadow = true;
+            scene.add(ball);
+            
+            // Čáry na míči
+            const lineGeometry = new THREE.TorusGeometry(0.31, 0.01, 4, 8);
+            const lineMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            
+            const line1 = new THREE.Mesh(lineGeometry, lineMaterial);
+            line1.rotation.x = Math.PI / 2;
+            ball.add(line1);
+            
+            const line2 = new THREE.Mesh(lineGeometry, lineMaterial);
+            line2.rotation.z = Math.PI / 2;
+            ball.add(line2);
+        }
+        
+        function setupEventListeners() {
+            // Touch eventy
+            document.addEventListener('touchstart', onTouchStart, { passive: false });
+            document.addEventListener('touchmove', onTouchMove, { passive: false });
+            document.addEventListener('touchend', onTouchEnd, { passive: false });
+            
+            // Mouse eventy pro desktop
+            document.addEventListener('mousedown', onMouseDown);
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+            
+            document.addEventListener('click', onInvitationClick);
+            window.addEventListener('resize', onWindowResize);
+            
+            // Gyroscope inicializace
+            initGyroscope();
+        }
+        
+        function updateBallScreenPosition() {
+            if (!ball || !camera) return;
+            
+            const vector = ball.position.clone();
+            vector.project(camera);
+            
+            ballScreenPos.x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+            ballScreenPos.y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
+        }
+        
+        function onTouchStart(event) {
+            event.preventDefault();
+            if (!ballInMotion && !invitationShown) {
+                const touch = event.touches[0];
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+                touchCurrentX = touch.clientX;
+                touchCurrentY = touch.clientY;
+                isAiming = true;
+                document.getElementById('aimLine').style.display = 'block';
+                updateAimLine();
+            }
+        }
+        
+        function onTouchMove(event) {
+            event.preventDefault();
+            if (isAiming) {
+                const touch = event.touches[0];
+                touchCurrentX = touch.clientX;
+                touchCurrentY = touch.clientY;
+                updateAimLine();
+            }
+        }
+        
+        function onTouchEnd(event) {
+            event.preventDefault();
+            if (isAiming && !ballInMotion) {
+                shootBallTouch();
+                isAiming = false;
+                document.getElementById('aimLine').style.display = 'none';
+                attempts++;
+                document.getElementById('attempts').textContent = attempts;
+            }
+        }
+        
+        function updateAimLine() {
+            if (!ball || !camera) return;
+            
+            updateBallScreenPosition();
+            
+            const line = document.getElementById('trajectoryLine');
+            const dot = document.getElementById('aimDot');
+            
+            if (line && dot) {
+                line.setAttribute('x1', ballScreenPos.x);
+                line.setAttribute('y1', ballScreenPos.y);
+                line.setAttribute('x2', touchCurrentX);
+                line.setAttribute('y2', touchCurrentY);
+                
+                dot.setAttribute('cx', touchCurrentX);
+                dot.setAttribute('cy', touchCurrentY);
+            }
+        }
+        
+        function shootBallTouch() {
+            if (!ball) return;
+            
+            updateBallScreenPosition();
+            
+            const dx = touchCurrentX - ballScreenPos.x;
+            const dy = touchCurrentY - ballScreenPos.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < 10) return; // Příliš malý tah
+            
+            // Převod screen koordinátů na 3D směr
+            const power = Math.min(distance / 90, 3.5); // Citlivější a silnější hod
+            
+            // Normalizovaný směr ve screen space
+            const dirX = dx / distance;
+            const dirY = dy / distance;
+            
+            // Převod na 3D world koordináty (laděno pro realističtější let)
+            const direction = new THREE.Vector3();
+            direction.x = dirX * power * 0.12;
+            direction.y = -dirY * power * 0.12 + 0.25; // více výšky pro oblouk
+            direction.z = -power * 0.22; // delší let dopředu
+            
+            ballVelocity.copy(direction);
+            ballInMotion = true;
+            
+            // Update power meteru
+            const powerPercent = Math.min((power / 2) * 100, 100);
+            const powerBar = document.getElementById('powerBar');
+            if (powerBar) {
+                powerBar.style.width = powerPercent + '%';
+            }
+        }
+        
+        function onInvitationClick() {
+            if (invitationShown) {
+                document.getElementById('invitation').style.display = 'none';
+                invitationShown = false;
+                resetBall();
+            }
+        }
+        
+        // Fallback mouse ovládání pro desktop
+        function onMouseDown(event) {
+            if (!ballInMotion && !invitationShown) {
+                touchStartX = event.clientX;
+                touchStartY = event.clientY;
+                touchCurrentX = event.clientX;
+                touchCurrentY = event.clientY;
+                isAiming = true;
+                document.getElementById('aimLine').style.display = 'block';
+                updateAimLine();
+            }
+        }
+        
+        function onMouseMove(event) {
+            if (isAiming) {
+                touchCurrentX = event.clientX;
+                touchCurrentY = event.clientY;
+                updateAimLine();
+            }
+        }
+        
+        function onMouseUp() {
+            if (isAiming && !ballInMotion) {
+                shootBallTouch();
+                isAiming = false;
+                document.getElementById('aimLine').style.display = 'none';
+                attempts++;
+                document.getElementById('attempts').textContent = attempts;
+            }
+        }
+        
+        function updateBall() {
+            if (ballInMotion) {
+                // Uložení předchozí výšky pro pozdější detekci průletu obručí
+                prevBallY = ball.position.y;
+                
+                // Aplikace gravitace
+                ballVelocity.y += gravity;
+                
+                // Pohyb míče
+                ball.position.add(ballVelocity);
+                
+                // Rotace míče
+                ball.rotation.x += ballVelocity.length() * 0.1;
+                ball.rotation.z += ballVelocity.length() * 0.05;
+                
+                // Kolize se zemí
+                if (ball.position.y <= 0.3) {
+                    ball.position.y = 0.3;
+                    ballVelocity.y *= -bounce;
+                    ballVelocity.x *= friction;
+                    ballVelocity.z *= friction;
+                    
+                    if (Math.abs(ballVelocity.y) < 0.01 && ballVelocity.length() < 0.02) {
+                        ballInMotion = false;
+                        setTimeout(resetBall, 2000);
+                    }
+                }
+                
+                // Kolize s deskou
+                const backboard = scene.getObjectByName('backboard');
+                if (backboard) {
+                    const ballBox = new THREE.Box3().setFromObject(ball);
+                    const backboardBox = new THREE.Box3().setFromObject(backboard);
+
+                    if (ballBox.intersectsBox(backboardBox)) {
+                        // Jednoduchý odraz od desky
+                        ballVelocity.z *= -1; 
+                        ball.position.z += ballVelocity.z * 1.1; // Posuneme míč mírně od desky
+                    }
+                }
+
+                // Kolize s obručí (torus) – aproximujeme horizontálním kruhem
+                const rimCenter = new THREE.Vector3(0, 4, -6);
+                const rimRadius = 0.6;
+                const rel = ball.position.clone().sub(rimCenter);
+                const horizDist = Math.sqrt(rel.x * rel.x + rel.z * rel.z);
+                if (ball.position.y > 3.7 && ball.position.y < 4.3 &&
+                    horizDist >= rimRadius - 0.15 && horizDist <= rimRadius + 0.08) {
+                    // Jednoduchý odraz od obruče
+                    const normal = new THREE.Vector3(rel.x, 0, rel.z).normalize();
+                    const velDot = ballVelocity.dot(normal);
+                    if (velDot < 0) {
+                        const reflect = normal.multiplyScalar(-2 * velDot);
+                        ballVelocity.add(reflect).multiplyScalar(0.7);
+                    }
+                }
+                
+                // Kontrola koše
+                checkBasket();
+                
+                // Reset pokud míč odletí příliš daleko
+                if (ball.position.length() > 50) {
+                    resetBall();
+                }
+            }
+        }
+        
+        function checkBasket() {
+            // Přesnější detekce: míč musí proletět shora dolů skrz obruč
+            const hoopPos = new THREE.Vector3(0, 4, -6); // Přesná pozice obruče
+            const ballPos2D = new THREE.Vector2(ball.position.x, ball.position.z);
+            const hoopPos2D = new THREE.Vector2(hoopPos.x, hoopPos.z);
+            const horizDist = ballPos2D.distanceTo(hoopPos2D);
+            
+            // Sledování, zda míč byl nad obručí
+            if (ball.position.y > 4.2 && horizDist < 0.8) {
+                ballWasAboveRim = true;
+            }
+            
+            // Detekce koše: míč musí být nad obručí a pak projít dolů
+            if (ballWasAboveRim && 
+                ball.position.y >= 3.5 && ball.position.y <= 4.2 && // v rozsahu výšky obruče
+                horizDist < 0.55 && // dostatečně blízko středu
+                ballVelocity.y < -0.05) { // klesá dostatečně rychle
+                
+                // Gól!
+                baskets++;
+                document.getElementById('baskets').textContent = baskets;
+                ballInMotion = false;
+                ballWasAboveRim = false; // reset pro další pokus
+
+                // Okamžité efekty
+                playMusic();
+                playTrefa();
+                for (let i = 0; i < 20; i++) { // Více konfet pro lepší efekt
+                    createConfetti();
+                }
+                
+                // Efekty se zpožděním 2 sekundy (zkráceno)
+                setTimeout(() => {
+                    showInvitation();
+                    createBalloons();
+                }, 2000);
+            }
+            
+            // Reset ballWasAboveRim pokud míč dopadl nebo odletěl příliš daleko
+            if (ball.position.y < 1 || horizDist > 5) {
+                ballWasAboveRim = false;
+            }
+        }
+        
+        function createConfetti() {
+            const confettiGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+            const confettiMaterial = new THREE.MeshBasicMaterial({ 
+                color: Math.random() * 0xffffff 
+            });
+            const confetti = new THREE.Mesh(confettiGeometry, confettiMaterial);
+            
+            confetti.position.set(
+                (Math.random() - 0.5) * 10,
+                8,
+                (Math.random() - 0.5) * 10
+            );
+            
+            confetti.velocity = new THREE.Vector3(
+                (Math.random() - 0.5) * 0.2,
+                -Math.random() * 0.1,
+                (Math.random() - 0.5) * 0.2
+            );
+            
+            scene.add(confetti);
+            
+            // Odstranění po 3 sekundách
+            setTimeout(() => {
+                scene.remove(confetti);
+            }, 3000);
+        }
+        
+        function showInvitation() {
+            const invitation = document.getElementById('invitation');
+            invitation.style.display = 'flex';
+
+            document.getElementById('download-ics').onclick = generateAndDownloadICS;
+            document.getElementById('close-invitation').onclick = hideInvitation;
+            invitation.onclick = function(event) {
+                if (event.target === invitation) {
+                    hideInvitation();
+                }
+            };
+        }
+
+        function hideInvitation() {
+            document.getElementById('invitation').style.display = 'none';
+            resetBall(); // Resetujeme míč pro další hru
+        }
+
+        function generateAndDownloadICS() {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            // Nastavení času oslavy (např. 16:00 - 20:00)
+            const eventStart = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 16, 0, 0);
+            const eventEnd = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 20, 0, 0);
+
+            // Formátování data pro ICS soubor (YYYYMMDDTHHMMSS)
+            const toICSDate = (date) => date.toISOString().replace(/[-:.]/g, '').slice(0, -4);
+
+            const icsContent = [
+                'BEGIN:VCALENDAR',
+                'VERSION:2.0',
+                'PRODID:-//Cascade//Narozeninová Pozvánka//CZ',
+                'BEGIN:VEVENT',
+                'UID:' + Date.now() + '@pozvanka.ondry',
+                'DTSTAMP:' + toICSDate(new Date()) + 'Z',
+                'DTSTART:' + toICSDate(eventStart),
+                'DTEND:' + toICSDate(eventEnd),
+                'SUMMARY:Narozeninová oslava!',
+                'DESCRIPTION:Jsi srdečně zván na moji narozeninovou oslavu! Odkaz na mapu: https://maps.app.goo.gl/q57GzSXWAjEMSeH2A',
+                'LOCATION:https://maps.app.goo.gl/q57GzSXWAjEMSeH2A',
+                'END:VEVENT',
+                'END:VCALENDAR'
+            ].join('\r\n');
+
+            const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'pozvanka.ics';
+            link.click();
+        }
+        
+        function resetBall() {
+            ball.position.set(0, 1, 5);
+            ballVelocity.set(0, 0, 0);
+            ballInMotion = false;
+            power = 0;
+        }
+        
+        function updatePower() {
+            // Power se už nepoužívá pro charging, ale pro vizuální feedback
+            if (!isAiming) {
+                const powerBar = document.getElementById('powerBar');
+                if (powerBar) {
+                    const currentWidth = parseFloat(powerBar.style.width) || 0;
+                    if (currentWidth > 0) {
+                        powerBar.style.width = (currentWidth * 0.95) + '%';
+                    }
+                }
+            }
+        }
+        
+        function initGyroscope() {
+            // Pokus o aktivaci gyroscopu (iOS 13+ vyžaduje povolení)
+            if (typeof DeviceOrientationEvent !== 'undefined') {
+                // Pro iOS 13+ je potřeba explicitní povolení
+                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    DeviceOrientationEvent.requestPermission()
+                        .then(response => {
+                            if (response === 'granted') {
+                                startGyroscope();
+                            } else {
+                                console.log('Gyroscope permission denied');
+                            }
+                        })
+                        .catch(console.error);
+                } else {
+                    // Pro starší verze nebo Android
+                    startGyroscope();
+                }
+            }
+        }
+        
+        function startGyroscope() {
+            window.addEventListener('deviceorientation', onDeviceOrientation, false);
+            gyroEnabled = true;
+            console.log('Gyroscope activated!');
+            
+            // Kalibrace po 1 sekundě
+            setTimeout(() => {
+                calibrateGyroscope();
+            }, 1000);
+        }
+        
+        function calibrateGyroscope() {
+            // Tato funkce se volá pro nastavení základní orientace
+            console.log('Gyroscope calibrated');
+        }
+        
+        function onDeviceOrientation(event) {
+            if (!gyroEnabled || !camera) return;
+            
+            // Nastavení základní orientace při prvním spuštění
+            if (baseOrientation.alpha === 0 && baseOrientation.beta === 0 && baseOrientation.gamma === 0) {
+                baseOrientation.alpha = event.alpha || 0;
+                baseOrientation.beta = event.beta || 0;
+                baseOrientation.gamma = event.gamma || 0;
+                return;
+            }
+            
+            const alpha = (event.alpha || 0) - baseOrientation.alpha;
+            const beta = (event.beta || 0) - baseOrientation.beta;
+            const gamma = (event.gamma || 0) - baseOrientation.gamma;
+            
+            // Převod na radiány s větší citlivostí
+            const sensitivity = 0.015; // Zvýšená citlivost
+            
+            // Omezení rozsahu pohybu
+            const maxRotation = 0.8; // Větší rozsah pohybu
+            
+            // Výpočet rotace s ohledem na orientaci zařízení
+            const rotationX = Math.max(-maxRotation, Math.min(maxRotation, -beta * sensitivity));
+            const rotationY = Math.max(-maxRotation, Math.min(maxRotation, gamma * sensitivity));
+            const rotationZ = Math.max(-maxRotation, Math.min(maxRotation, alpha * sensitivity * 0.3));
+            
+            // Aplikace rotace s vyhlazením
+            const smoothFactor = 0.15;
+            camera.rotation.x = lerp(camera.rotation.x, initialCameraRotation.x + rotationX, smoothFactor);
+            camera.rotation.y = lerp(camera.rotation.y, initialCameraRotation.y + rotationY, smoothFactor);
+            camera.rotation.z = lerp(camera.rotation.z, initialCameraRotation.z + rotationZ, smoothFactor);
+            
+            // Jemný posun pozice pro 3D efekt
+            const positionSensitivity = 1.2;
+            currentCameraOffset.x = lerp(currentCameraOffset.x, rotationY * positionSensitivity, 0.1);
+            currentCameraOffset.y = lerp(currentCameraOffset.y, -rotationX * positionSensitivity * 0.5, 0.1);
+            
+            camera.position.x = initialCameraPosition.x + currentCameraOffset.x;
+            camera.position.y = initialCameraPosition.y + currentCameraOffset.y;
+        }
+        
+        function lerp(start, end, factor) {
+            return start + (end - start) * factor;
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            updateBall();
+            updatePower();
+            updateBallScreenPosition();
+            
+            // Animace konfet
+            scene.children.forEach(child => {
+                if (child.velocity) {
+                    child.position.add(child.velocity);
+                    child.velocity.y -= 0.001;
+                    child.rotation.x += 0.1;
+                    child.rotation.y += 0.1;
+                }
+            });
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Audio efekty
+        const audio = new Audio('birthday-song.mp3');
+        
+        function playMusic() {
+            audio.currentTime = 0; // Reset na začátek
+            audio.play().catch(e => console.log('Audio play failed:', e));
+        }
+        
+        function playTrefa() {
+            const trefaText = document.createElement('div');
+            trefaText.classList.add('fanfare'); // Použijeme stejný styl
+            trefaText.textContent = 'Trefa!';
+            document.body.appendChild(trefaText);
+            
+            setTimeout(() => {
+                if (document.body.contains(trefaText)) {
+                    document.body.removeChild(trefaText);
+                }
+            }, 2000); // Zobrazí se na 2 sekundy
+        }
+        
+        function createBalloons() {
+            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
+            
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => {
+                    const balloon = document.createElement('div');
+                    balloon.classList.add('balloon');
+                    balloon.style.left = Math.random() * 100 + 'vw';
+                    balloon.style.bottom = '0px';
+                    balloon.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    
+                    // Přidání stínu pro 3D efekt
+                    balloon.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)';
+                    
+                    document.body.appendChild(balloon);
+                    
+                    setTimeout(() => {
+                        if (document.body.contains(balloon)) {
+                            document.body.removeChild(balloon);
+                        }
+                    }, 4500);
+                }, i * 100); // Postupné spouštění balónků
+            }
+        }
+        
+        // Spuštění hry
+        init();
+    </script>
+</body>
 </html>
